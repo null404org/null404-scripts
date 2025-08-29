@@ -1,0 +1,72 @@
+repos:
+  # ───────── General hygiene ─────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: check-yaml
+        stages: [pre-commit, pre-push]
+      - id: debug-statements            # remove stray print() / pdb
+        stages: [pre-commit]
+
+  # ───────── Python quality ─────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.7
+    hooks:
+    - id: ruff-check
+      args: [--fix]
+      stages: [pre-commit, pre-push]
+    - id: ruff-format
+      stages: [ pre-commit, pre-push ]
+
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: v5.10.1
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+        stages: [pre-commit, pre-push]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.5
+    hooks:
+      - id: bandit
+        args: ["--severity-level", "high", "--skip", "B101"]
+        exclude: tests/
+        stages: [pre-commit, pre-push]
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        stages: [pre-commit, pre-push]
+
+  - repo: https://github.com/trufflesecurity/trufflehog
+    rev: v3.90.5
+    hooks:
+      - id: trufflehog
+        name: TruffleHog
+        description: Detect secrets in your data.
+        entry: trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail
+        language: golang
+        stages: ["pre-commit", "pre-push"]
+
+  # ───────── Local CLI hooks ─────────
+  - repo: local
+    hooks:
+      # --- Trivy full filesystem scan ---
+      - id: trivy-fs
+        name: Trivy filesystem scan
+        language: system
+        entry: trivy
+        args:
+          ["fs",
+           "--severity", "CRITICAL,HIGH",
+           "--timeout", "10m",
+           "--skip-dirs", ".venv,venv",
+           "--skip-dirs", "tests",
+           "."]
+        pass_filenames: false
+        stages: [pre-commit, pre-push]
+        exclude: ^\.pre-commit-trivy-cache/
